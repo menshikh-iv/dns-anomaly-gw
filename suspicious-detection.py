@@ -2,10 +2,11 @@ import argparse
 import logging
 import itertools
 import numpy as np
+from joblib import Parallel, delayed
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier, GradientBoostingClassifier
 from sklearn.grid_search import ParameterGrid
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, precision_score, recall_score
 from tldextract import TLDExtract
 
 from binlog_reader import binlog_reader
@@ -153,20 +154,48 @@ def join_features_by_keys(keys, features_list):
             tmp_full[domain].update(features[domain])
 
     all_features = sorted(tmp_full[keys[0]].keys())
-    logger.debug("Features - %s", ','.join(all_features))
+    logger.debug("Features - %s", ','.join(str(x) for x in all_features))
     return np.array([[tmp_full[domain][f] for f in all_features] for domain in keys])
 
 
-def grid_search(scoring, X_train, y_train, X_test, y_test):
-    for classifier in scoring:
-        logger.debug("Griding clf %s", classifier.__name__)
-        for idx, param in enumerate(scoring[classifier]):
-            clf = classifier(**dict(param))
-            clf.fit(X_train, y_train)
-            y_pred = clf.predict(X_test)
-            scoring[classifier][param].append(roc_auc_score(y_test, y_pred))
-            if (idx + 1) % 10 == 0:
-                logger.debug("Iteration #%d of %d", idx + 1, len(scoring[classifier]))
+def cacl_stat(y_test, out_lab):
+    tp, tn, fp, fn = 0, 0, 0, 0
+    for true, pred in zip(y_test, out_lab):
+        if true == pred:
+            if pred == 1:
+                tp += 1
+            else:
+                tn += 1
+        elif true == 1:
+            fn += 1
+        else:
+            fp += 1
+
+    return tp, tn, fp, fn
+
+
+def learn_clf(classifier, param, X_train, y_train, X_test, y_test):
+    clf = classifier(**param)
+    clf.fit(X_train, y_train)
+    out = clf.predict_proba(X_test)
+    out_lab = clf.predict(X_test)
+
+    if len(out.shape) == 2:
+        out = out[:, np.where(clf.classes_ == 1)[0][0]]
+
+    return classifier, param, {"roc-auc": roc_auc_score(y_test, out),
+                               "tp-tn-fp-fn": cacl_stat(y_test, out_lab),
+                               "precision": precision_score(y_test, out_lab),
+                               "recall": recall_score(y_test, out_lab)}
+
+
+def grid_search(grid, X_train, y_train, X_test, y_test):
+    logger.debug("Start grid search")
+    with Parallel(n_jobs=-1, backend="multiprocessing") as parallel:
+        result = parallel(delayed(learn_clf)(clf, param, X_train, y_train, X_test, y_test)
+                          for (clf, param) in grid)
+    logger.debug("End grid search")
+    return result
 
 
 def make_predictor(X, y, ip2domain_full, domain2ip_full, const_features, n_folds=5):
@@ -174,46 +203,63 @@ def make_predictor(X, y, ip2domain_full, domain2ip_full, const_features, n_folds
     skf = StratifiedKFold(y, n_folds=n_folds)
 
     clfs = [
-        (AdaBoostClassifier, {"n_estimators": [30, 50, 70, 100, 120, 150],
+        (AdaBoostClassifier, {"n_estimators": [30, 50, 70, 100, 120, 150, 180],
                               "learning_rate": [1., 0.8, 0.5, 0.1, 0.05]}),
-        (RandomForestClassifier, {"n_estimators": range(10, 101, 10),
+        (RandomForestClassifier, {"n_estimators": range(10, 150, 10),
                                   "max_features": ["sqrt", "log2", None]}),
-        (GradientBoostingClassifier, {"loss": ['deviance', 'exponential'],
-                                      "learning_rate": [0.01, 0.05, 0.1, 0.5],
-                                      "n_estimators": [50, 100, 150, 200],
-                                      "max_depth": range(2, 9)})
+        (GradientBoostingClassifier, {"learning_rate": [0.07, 0.1, 0.3],
+                                      "n_estimators": [50, 100, 200],
+                                      "max_depth": range(2, 5)})
     ]
-    scoring = {clf: {frozenset(comb.items()): [] for comb in ParameterGrid(params)}
-               for (clf, params) in clfs}
+
+    grid = [(clf, param) for clf, parameters in clfs for param in ParameterGrid(parameters)]
+    full_scores = {(clf, frozenset(param.items())): {"roc-auc": [],
+                                                     "tp-tn-fp-fn": [],
+                                                     "precision": [],
+                                                     "recall": []} for (clf, param) in grid}
 
     for idx, (train_index, test_index) in enumerate(skf):
         logger.debug("Folding iteration #%d", idx + 1)
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
         rank_features = ranking(ip2domain_full, domain2ip_full, X_train, y_train,
-                                init_abs_score=10, n_iter=20)
+                                init_abs_score=10, n_iter=4)
 
         X_features_train = join_features_by_keys(X_train, [const_features, rank_features])
         X_features_test = join_features_by_keys(X_test, [const_features, rank_features])
 
-        grid_search(scoring, X_features_train, y_train, X_features_test, y_test)
+        res = grid_search(grid, X_features_train, y_train, X_features_test, y_test)
 
-    for clf in scoring:
-        for param in scoring[clf]:
-            scoring[clf][param]['mean'] = np.mean(scoring[clf][param])
-            scoring[clf][param]['median'] = np.median(scoring[clf][param])
-    from pprint import pprint
-    pprint(scoring)
-    return scoring
+        for clf, param, score in res:
+            for metric in score:
+                full_scores[(clf, frozenset(param.items()))][metric].append(score[metric])
+
+    final_score = [(clf_class, params, {"roc-auc": np.mean(full_scores[(clf_class, params)]["roc-auc"]),
+                                        "precision": np.mean(full_scores[(clf_class, params)]["precision"]),
+                                        "recall": np.mean(full_scores[(clf_class, params)]["recall"]),
+                                        "TP": np.mean([x[0] for x in full_scores[(clf_class, params)]["tp-tn-fp-fn"]]),
+                                        "TN": np.mean([x[1] for x in full_scores[(clf_class, params)]["tp-tn-fp-fn"]]),
+                                        "FP": np.mean([x[2] for x in full_scores[(clf_class, params)]["tp-tn-fp-fn"]]),
+                                        "FN": np.mean([x[3] for x in full_scores[(clf_class, params)]["tp-tn-fp-fn"]])})
+                   for (clf_class, params) in full_scores]
+
+    final_score.sort(key=lambda _: _[2]["roc-auc"], reverse=True)
+
+    logger.info("Top 50 params")
+    for idx, (c, p, s) in enumerate(final_score[:50]):
+        logger.debug("# %d | Clf: %s, params: %s, scores: %s", idx + 1, c.__name__, str(p), str(s))
+
+    final_clf = final_score[0][0](**dict(final_score[0][1]))
+    return final_clf
 
 
-def processing(logfiles, blacklist, whitelist):
+def processing(logfiles, blacklist, whitelist, output_file):
     queries = [read_logfile(fn, ("client_ip", "dname")) for fn in sorted(logfiles)]
     hosts = set([domain for (ip, domain) in itertools.chain.from_iterable(queries)])
     domain2host, host2domain = create_domain_indexes(hosts)
 
     queries = [[(ip, host2domain[domain]) for (ip, domain) in hour] for hour in queries]
-    queries = [set(filter(lambda (_, d): d, hour)) for hour in queries]
+    queries = [set(filter(lambda (_, dom): dom, hour)) for hour in queries]
 
     small_indexes = [create_indexes(hour) for hour in queries]
     domain2ip_full, ip2domain_full = merge_indexes(small_indexes)
@@ -222,9 +268,27 @@ def processing(logfiles, blacklist, whitelist):
 
     X, y = prepare_trainset(blacklist, whitelist, all_domains)
     ga_features = group_activities(all_domains, domain2ip_by_hour)
+    clf = make_predictor(X, y, ip2domain_full, domain2ip_full, ga_features, n_folds=2)
 
-    clf = make_predictor(X, y, ip2domain_full, domain2ip_full, ga_features, n_folds=4)
-    # y_pred = clf.predict(X)
+    rank_final_features = ranking(ip2domain_full, domain2ip_full, X, y,
+                                  init_abs_score=10, n_iter=4)
+    X_final = join_features_by_keys(X, [ga_features, rank_final_features])
+    logger.info(type(X_final), type(y))
+    clf.fit(X_final, y)
+
+    all_domains = list(all_domains)
+    X_full = join_features_by_keys(all_domains, [ga_features, rank_final_features])
+    result_prob, result_bin = clf.predict_proba(X_full)[:, np.where(clf.classes_ == 1)[0][0]], clf.predict(X_full)
+
+    labeled_domains = {x: lab for x, lab in zip(X, y)}
+
+    to_file = sorted(zip(all_domains, result_prob, result_bin), key=lambda x: x[1], reverse=True)
+
+    logger.debug("Save result to %s", output_file)
+    with open(output_file, 'w') as outfile:
+        for d, prob, lab in to_file:
+            in_train = labeled_domains.get(d, 0)
+            outfile.write("{}\t{}\t{}\t{}\t{}\n".format(d, prob, lab, ",".join(domain2host[d]), in_train))
 
 
 def main():
@@ -233,12 +297,12 @@ def main():
     parser.add_argument('-f', '--files', help='Files with logs', required=True, nargs='*')
     parser.add_argument('-b', '--blacklist', help='Path to blacklist', required=True, type=str)
     parser.add_argument('-w', '--whitelist', help='Path to whitelist', required=True, type=str)
+    parser.add_argument('-o', '--output', help='Path to output prediction', required=True, type=str)
     parser.add_argument('-v', '--verbose', help='Verbose flag', action='store_const', dest="loglevel",
                         const=logging.DEBUG, default=logging.WARNING)
-
     args = parser.parse_args()
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=args.loglevel)
-    return processing(args.files, args.blacklist, args.whitelist)
+    return processing(args.files, args.blacklist, args.whitelist, args.output)
 
 
 if __name__ == '__main__':
