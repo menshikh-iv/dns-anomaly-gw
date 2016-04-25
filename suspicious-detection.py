@@ -198,7 +198,7 @@ def grid_search(grid, X_train, y_train, X_test, y_test):
     return result
 
 
-def make_predictor(X, y, ip2domain_full, domain2ip_full, const_features, n_folds=5):
+def make_predictor(X, y, ip2domain_full, domain2ip_full, const_features, n_folds, n_iter):
     logger.debug("Creating classifier, n_folds = %d", n_folds)
     skf = StratifiedKFold(y, n_folds=n_folds)
 
@@ -223,7 +223,7 @@ def make_predictor(X, y, ip2domain_full, domain2ip_full, const_features, n_folds
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
         rank_features = ranking(ip2domain_full, domain2ip_full, X_train, y_train,
-                                init_abs_score=10, n_iter=4)
+                                init_abs_score=10, n_iter=n_iter)
 
         X_features_train = join_features_by_keys(X_train, [const_features, rank_features])
         X_features_test = join_features_by_keys(X_test, [const_features, rank_features])
@@ -253,7 +253,7 @@ def make_predictor(X, y, ip2domain_full, domain2ip_full, const_features, n_folds
     return final_clf
 
 
-def processing(logfiles, blacklist, whitelist, output_file):
+def processing(logfiles, blacklist, whitelist, output_file, n_folds, n_iter):
     queries = [read_logfile(fn, ("client_ip", "dname")) for fn in sorted(logfiles)]
     hosts = set([domain for (ip, domain) in itertools.chain.from_iterable(queries)])
     domain2host, host2domain = create_domain_indexes(hosts)
@@ -268,12 +268,10 @@ def processing(logfiles, blacklist, whitelist, output_file):
 
     X, y = prepare_trainset(blacklist, whitelist, all_domains)
     ga_features = group_activities(all_domains, domain2ip_by_hour)
-    clf = make_predictor(X, y, ip2domain_full, domain2ip_full, ga_features, n_folds=2)
+    clf = make_predictor(X, y, ip2domain_full, domain2ip_full, ga_features, n_folds, n_iter)
 
-    rank_final_features = ranking(ip2domain_full, domain2ip_full, X, y,
-                                  init_abs_score=10, n_iter=4)
+    rank_final_features = ranking(ip2domain_full, domain2ip_full, X, y, init_abs_score=10, n_iter=n_iter)
     X_final = join_features_by_keys(X, [ga_features, rank_final_features])
-    logger.info(type(X_final), type(y))
     clf.fit(X_final, y)
 
     all_domains = list(all_domains)
@@ -300,9 +298,12 @@ def main():
     parser.add_argument('-o', '--output', help='Path to output prediction', required=True, type=str)
     parser.add_argument('-v', '--verbose', help='Verbose flag', action='store_const', dest="loglevel",
                         const=logging.DEBUG, default=logging.WARNING)
+    parser.add_argument('--n_folds', help='Number of folds in cv stage', default=4, type=int)
+    parser.add_argument('--n_iter', help='Number of iteration for rank calc', default=20, type=int)
     args = parser.parse_args()
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=args.loglevel)
-    return processing(args.files, args.blacklist, args.whitelist, args.output)
+    return processing(args.files, args.blacklist, args.whitelist, args.output,
+                      args.n_folds, args.n_iter)
 
 
 if __name__ == '__main__':
