@@ -27,7 +27,7 @@ def processing(input_folder, output_folder, conf_path, batch_size):
     if len(batches[-1]) < batch_size:
         logger.warning("Skip last batch %s", ",".join(batches.pop()))
 
-    for b in batches:
+    for idx, b in enumerate(batches):
         for_call = ["python suspicious-detection.py",
                     "--files {}".format(" ".join(b)),
                     "--blacklist {}".format(conf["blacklist"]),
@@ -37,9 +37,11 @@ def processing(input_folder, output_folder, conf_path, batch_size):
                     "--n_folds {}".format(conf["n_folds"]),
                     "--verbose"]
 
+        logger.info("Processing bath #%d of %d", idx + 1, len(batches))
         result_string = " ".join(for_call)
         logger.info("Run %s", result_string)
         os.system(result_string)
+        logger.info("=" * 20)
 
 
 def main():
