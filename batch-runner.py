@@ -28,11 +28,13 @@ def processing(input_folder, output_folder, conf_path, batch_size):
         logger.warning("Skip last batch %s", ",".join(batches.pop()))
 
     for idx, b in enumerate(batches):
+        output_fname = os.path.join(output_folder, "BATCH#{}-".format(idx + 1) +
+                                    "-".join(x.split('/')[-1] for x in b))
         for_call = ["python suspicious-detection.py",
                     "--files {}".format(" ".join(b)),
                     "--blacklist {}".format(conf["blacklist"]),
                     "--whitelist {}".format(conf["whitelist"]),
-                    "--output {}".format(os.path.join(output_folder, "-".join(b))),
+                    "--output {}".format(output_fname),
                     "--n_iter {}".format(conf["n_iter"]),
                     "--n_folds {}".format(conf["n_folds"]),
                     "--verbose"]
