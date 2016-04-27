@@ -203,13 +203,14 @@ def make_predictor(X, y, ip2domain_full, domain2ip_full, const_features, n_folds
     skf = StratifiedKFold(y, n_folds=n_folds)
 
     clfs = [
-        (AdaBoostClassifier, {"n_estimators": [30, 50, 70, 100, 120, 150, 180],
+        (AdaBoostClassifier, {"n_estimators": [30, 50, 100, 150, 200, 250, 300],
                               "learning_rate": [1., 0.8, 0.5, 0.1, 0.05]}),
         (RandomForestClassifier, {"n_estimators": range(10, 150, 10),
+                                  "criterion": ["gini", "entropy"],
                                   "max_features": ["sqrt", "log2", None]}),
-        (GradientBoostingClassifier, {"learning_rate": [0.07, 0.1, 0.3],
-                                      "n_estimators": [50, 100, 200],
-                                      "max_depth": range(2, 5)})
+        # (GradientBoostingClassifier, {"learning_rate": [0.07, 0.1, 0.3],
+        #                              "n_estimators": [50, 100, 200],
+        #                              "max_depth": range(2, 5)})
     ]
 
     grid = [(clf, param) for clf, parameters in clfs for param in ParameterGrid(parameters)]
