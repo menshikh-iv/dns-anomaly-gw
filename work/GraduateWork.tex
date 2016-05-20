@@ -177,7 +177,7 @@ exploit, который позволяет исполнить произволь
 	
 	\newpage
 	\section{Топология}
-	Можно выделить две основных топологии построения ботнетов
+	Можно выделить две основных топологии построения ботнетов \cite{communication}
 	
 
 	\begin{figure}[H]
@@ -206,7 +206,7 @@ exploit, который позволяет исполнить произволь
 	
 	\newpage
 	\section{Стратегии уклонения}
-	Для того, чтобы предотвратить обнаружение управляющий серверов и уничтожение ботнета, ботмастеры используют различные стратегии, препятствующие этому.
+	Для того, чтобы предотвратить обнаружение управляющий серверов и уничтожение ботнета, ботмастеры используют различные стратегии, препятствующие этому \cite{communication}.
 	\subsection{IP Flux (fast flux)}
 	Один из вариантов - использовать много ip адресов для одного доменного имени и маленький TTL для A записи в DNS пакете. Данный приём можно усложнить, меняя также ip адреса соответствующий NS серверов.
 	
@@ -237,20 +237,89 @@ exploit, который позволяет исполнить произволь
 Таким образом, теперь мы имеем базовое представление о ботнетах, их структуре и поведении.
 
 	\chapter{Групповая активность}
-	Это я уже попробовал немного, работает не очень хорошо, очень много мусора даёт на выходе, но тем не менее оно работает.
-	\section{Описание подхода}
-	тут будет текст
+	\section{Описание}
+	Один из подходов поиска ботнетов - отслеживание групповой активности клиент-домен. Основываясь на работе \cite{groupact} сделаем несколько предположений:
+	
+	1. Заражённых хостов в сети фиксированное количество
+	
+	2. Взаимодействие заражённых хостов и C\&C сервера проявляется переодически
+	
+	3. Как правило, используется техника domain flux, которая была описана выше (используется много доменных имён и мало ip адресов)
+	
+	Исходя из данных предположений, можно составить алгоритм, который выделит подозрительные коммуникации между группами хостов и доменом.
+	
 	\section{Алгоритм}
+	
+	Алгоритм поиска групповой активности можно разделить на 3 стадии: сбор информации о запросах пользователей, фильтрация запросов и детектирование подозрительной активности. 
+	
+	Изначально, мы делим все $querylog$ на <<окна>>, в текущем случае использовалось окно длины 1 час. Выбрано это число из таких соображений: частая коммуникация не свойственна ботнетам, поэтому не имеет смысл использовать окно меньшего размера. Кроме того, при слишком маленьком окне, высок шанс ложного срабатывания алгоритма, а при слишком большом - слабой чувствительности.
+	
+	Первая функция группирует все пары запросов ($client\_ip$, $domain$) по домену. Подобная агрегация позволяет получить представление о том, кто именно запрашивает конкретный домен.
+	\begin{algorithmic}
+	\Function{SearchInfo}{$querylog$ [by hour]}
+	\State $data\gets Dictionary<str, set>$
+	\For{($client\_ip$, $domain$) in $querylog$} 
+	
+		\State $data[domain]$.add($client$)
+	\EndFor
+	
+	\State \Return $data$
+	\EndFunction
+	\end{algorithmic}
 
-\begin{algorithmic}
-\If {$igeq maxval$}
-    \State $igets 0$
-\Else
-    \If {$i+kleq maxval$}
-        \State $igets i+k$
-    \EndIf
-\EndIf
-\end{algorithmic}
+	Следующая функция фильтрует полученные данные. Нам необходимо исключить все доменные имена, которые есть в $whitelist$, а также те доменные имена, которые запрашиваются малым количеством пользователей (хорошим вариантом будет значение $threshould$ $\in$ 3, 4, 5, 6, 7)
+	
+
+	\begin{algorithmic}
+	\Function{FilterQueries}{$data<str,set>$, $whitelist$, $threshould$}
+	\For{$domain$ in $data$}
+		\If{$domain$ in $whitelist$ OR length(data[domain]) < threshould}
+			\State $ip\_list\gets data[domain]$
+			\State $data$.remove($domain$)
+			\State $data$.pop\_values($ip\_list$)
+		\EndIf
+		
+		
+	\EndFor
+	\State \Return $data$
+	\EndFunction
+	\end{algorithmic}
+	
+	Последняя функция выполняет предварительную обработку $querylogs$, выбирает доменные имена, к которым в разные временные промежутки обращаются, в основном, одни и те же пользователи, что, в рамках наших начальных предположений, говорит о вредоносности такого домена
+	\begin{algorithmic}
+	\Function{DetectBotnetDomain}{$querylogs<list>$, $sim\_score$}
+	\State $data\_arr\gets List<dictionary>$
+	\State $botnet\_domains\gets Set<str>$
+	\For{$querylog$ in $querylogs$}
+		\State $curr\_data\gets SearchInfo(querylog)$
+		\State $curr\_data\gets FilterQueries(curr\_data)$
+		\State $data\_arr$.append($curr\_data$)
+
+	\EndFor
+	\For{$data_1$ in $data\_arr$}
+		\For{$data_2$ in $data\_arr$}
+			\If{$data_1$ $\ne$ $data_2$}
+				\For{$domain$ in $data_1$ $\cap$ $data_2$}
+					\State $curr\_sim\gets Similarity(data_1[domain], data_2[domain])$
+					\If{$curr\_sim$ > $sim\_score$}
+						\State $botnet\_domains$.add($domain$)
+					\EndIf
+				\EndFor
+			\EndIf
+		\EndFor
+	\EndFor
+	\State \Return $botnet\_domains$
+	\EndFunction
+	\end{algorithmic}
+	
+	
+	Немного о функции $similarity$, она выражает <<схожесть>> между клиентами, которые запрашивают один и тот же домен. В работе [2] предлагается для этих целей использовать такую функцию: 
+	$$similarity(ipList_1, ipList_2) = \frac{1}{2} * (\frac{C}{A} + \frac{C}{B}) (A\ne0, B\ne0)$$
+	где $A = |ipList_1|$, $B = |ipList_2|$, $C = |ipList_1\cap ipList_2|$
+	
+	Эксперименты показали, что есть более подходящая функция - расстояние Джаккара: $$similarity(iplist_1, iplist_2) = \frac{|ipList_1\cap ipList_2|}{|ipList_1\cup ipList_2|}$$
+	
+	Таким образом, мы рассмотрели вариант детектирования подозрительных доменных имен, основанный на групповой активности.
 	
 	\chapter{Ранжирование доменов}
 	Это я пробую сейчас, пока получаются странные результаты, которые я не могу объяснить, требует сборки тестового стенда
@@ -282,11 +351,19 @@ exploit, который позволяет исполнить произволь
 	%тут будет текст
 
 	\chapter{Результаты исследований}
-	тут будет текст
+	тут будет текст %\cite{doe:website}
 	
-	\chapter{Литература}
-	тут будет текст
-	
-	
+\addcontentsline{toc}{chapter}{Литература}
+\begin{thebibliography}{99}
 
+\bibitem{communication} Gunter Ollmann, ``Botnet Communication Topologies. Understanding the intricacies of botnet command-and-control'', 2009.
+
+\bibitem{groupact} Hyunsang Choi, Hanwoo Lee, Heejo Lee, Hyogon Kim, ``Botnet Detection by Monitoring Group Activities in
+DNS Traffic''.
+
+\end{thebibliography}
+
+%\addcontentsline{toc}{chapter}{bibname}
+%\bibliographystyle{utf8gost705u}
+%\bibliography{biblio}
 \end{document} 
