@@ -1,14 +1,18 @@
+import itertools
 import logging
 import argparse
 import glob
 import os
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
 
 def processing(input_folder, output):
     files = glob.glob(os.path.join(input_folder, "*"))
-    with open(output, 'w') as outfile:
+    tmp_fname = output + "_tmp"
+    logger.info("Start first stage (collect all probs)")
+    with open(tmp_fname, 'w') as outfile:
         for idx, fl in enumerate(files):
             logger.info("Iter #{}/{}, file {}".format(idx + 1, len(files), fl))
             with open(fl, 'r') as infile:
@@ -18,9 +22,21 @@ def processing(input_folder, output):
                     d_list = d_list.split(",")
                     if lab == 1 and in_train != -1:
                         for d in d_list:
-                            if d.endswith('in-addr.arpa'):
+                            if d.endswith('in-addr.arpa') or \
+                               d.endswith('sophosxl.net') or \
+                               d.endswith('webcfs00.com') or \
+                               d.endswith('loudtalks.com') or \
+                               d.startswith('yahoo.'):
                                 continue
-                            outfile.write("{}\n".format(d))
+                            outfile.write("{}\t{}\n".format(d, prob))
+    logger.info("Start second stage mean(prob)")
+    os.system("sort {0} -o {0}".format(tmp_fname))
+    with open(tmp_fname, 'r') as infile, open(output, 'w') as outfile:
+        for k, data in itertools.groupby(infile, key=lambda _: _.split('\t')[0]):
+            scores = [float(x.strip().split('\t')[1]) for x in data]
+            if np.mean(scores) > 0.52 and len(scores) > 2:
+                outfile.write("{}\n".format(k))
+    logger.info("Complete aggregation")
 
 
 def main():
