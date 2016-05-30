@@ -11,10 +11,20 @@
 \usepackage{amsfonts}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{url}
+\usepackage{listings}
 
 
 \usepackage{algorithm}
 \usepackage{algpseudocode}
+
+\usepackage[toc,page]{appendix}
+\renewcommand{\appendixtocname}{Приложения}
+\renewcommand{\appendixpagename}{Приложения}
+\makeatletter
+\g@addto@macro\appendices{\renewcommand{\thechapter}{\Asbuk{chapter}}}
+\makeatother
+
 
 \usepackage[nottoc,numbib]{tocbibind} %bibliography in table of contents
 
@@ -36,6 +46,7 @@
 	  {}
     \titlespacing*{\chapter}
       {0pt}{0pt}{10pt} %10 30 20 default
+
     
 \makeatletter
 \renewcommand{\@biblabel}[1]{#1.} % Заменяем библиографию с квадратных скобок на точку:
@@ -55,37 +66,37 @@
 				Федеральное государственное автономное образовательное учреждение\\
 				высшего профессионального образования\\
 			}
-			
+						
 			<<Уральский федеральный университет\\
 			имени первого Президента России Б.Н.Ельцина>>
-			
+						
 			\vskip+0.5cm
-			
+						
 			Институт математики и компьютерный наук\\
 			Кафедра вычислительной математики
-			
+						
 			\vskip+25mm
-			
+						
 			{\bf \LARGE
 				Поиск вредоносной активности в DNS трафике \\
 			}
-			
+						
 			\vskip+15mm
 		\end{center}
-			
+					
 		\vfill
 		\noindent\begin{parbox}[t]{9cm}{\small
 			\vspace{2.0cm}
 			Допустить к защите:
-			
+						
 			\bigskip
 			\bigskip
 			\bigskip
-			
+						
 			\hbox to45mm{\hrulefill}
-			
+						
 			\bigskip
-			
+						
 			<<\,\hbox to10mm{\hrulefill}\,>>  \hbox to25mm{\hrulefill}  2016 г.
 		}
 		\end{parbox}
@@ -150,7 +161,7 @@
 	$rcode$      & Код возврата DNS сервера                                       \\ \hline
 	$qtype$      & Код запрашиваемого типа записи                        \\ \hline
 	$timestamp$  & Временная метка получения сервером запроса \\ \hline
-	
+		
 \end{tabular}
 		
 	
@@ -160,7 +171,7 @@
 	Поле & Описание                                                                    \\ \hline
 	$domain$ & Доменное имя                                                             \\ \hline 
 	$cats$   & Cписок категорий, к которым принадлежит домен \\ \hline
-	
+		
 \end{tabular}
 \section{Словарь}
 \begin{tabular}{p{3cm} p{10cm}}
@@ -175,7 +186,7 @@
 	pDNS         & Техника, позволяющая отслеживать изменения в изменении соответствия доменных имён ip адресам                                                                                                                      \\
 	Bind         & Одна из реализаций DNS сервера                                                                                                                                                                                                                                            \\
 	\hline
-	
+		
 \end{tabular}
 	
 \chapter{Ботнеты}
@@ -202,7 +213,7 @@ exploit, который позволяет исполнить произволь
 	
 
 \begin{figure}[H]
-		
+			
 	\begin{subfigure}{0.5\textwidth}
 		\includegraphics[width=0.9\linewidth, height=5cm]{star_topology.png}
 		\caption{<<Звезда>>}
@@ -213,7 +224,7 @@ exploit, который позволяет исполнить произволь
 		\caption{<<Дерево>>}
 		\label{fig:subim2}
 	\end{subfigure}
-		 
+			 
 	\caption{Популярные варианты топологии ботнета}
 	\label{fig:image2}
 \end{figure}
@@ -281,10 +292,10 @@ exploit, который позволяет исполнить произволь
 	\Function{SearchInfo}{$querylog$ [by hour]}
 	\State $data\gets Dictionary$
 	\For{($client\_ip$, $domain$) in $querylog$} 
-		
+			
 	\State $data[domain]$.add($client$)
 	\EndFor
-		
+			
 	\State \Return $data$
 	\EndFunction
 \end{algorithmic}
@@ -300,8 +311,8 @@ exploit, который позволяет исполнить произволь
 	\State $data$.remove($domain$)
 	\State $data$.pop\_values($ip\_list$)
 	\EndIf
-			
-			
+				
+				
 	\EndFor
 	\State \Return $data$
 	\EndFunction
@@ -316,7 +327,7 @@ exploit, который позволяет исполнить произволь
 	\State $curr\_data\gets SearchInfo(querylog)$
 	\State $curr\_data\gets FilterQueries(curr\_data)$
 	\State $data\_arr$.append($curr\_data$)
-	
+		
 	\EndFor
 	\For{$data_1$ in $data\_arr$}
 	\For{$data_2$ in $data\_arr$}
@@ -390,12 +401,12 @@ exploit, который позволяет исполнить произволь
 	\State $black\_score = Dictionary$
 	\State $white\_score = Dictionary$
 	\State $union\_score = Dictionary$
-		
-		
+			
+			
 	\For{$domain$ in $blacklist$}
 	\State $black\_score[domain] = -init\_weight$
 	\EndFor
-		
+			
 	\For{$domain$ in $whitelist$}
 	\State $white\_score[domain] = init\_weight$
 	\EndFor
@@ -404,7 +415,7 @@ exploit, который позволяет исполнить произволь
 	\State $black\_score(h_i) = \sum_{d_j: (h_i, d_j)\in E} \frac{black\_score(d_j)}{deg(d_j)}$
 	\State $white\_score(h_i) = \sum_{d_j: (h_i, d_j)\in E} \frac{white\_score(d_j)}{deg(d_j)}$
 	\EndFor
-			
+				
 	\For{$d_j\in D$}
 	\State $black\_score(d_j) = \sum_{h_i: (h_i, d_j)\in E} \frac{black\_score(h_i)}{deg(h_i)}$
 	\State $white\_score(d_j) = \sum_{h_i: (h_i, d_j)\in E} \frac{white\_score(h_i)}{deg(h_i)}$
@@ -444,20 +455,20 @@ exploit, который позволяет исполнить произволь
 \begin{algorithmic}
 	\Function{CalcRank}{$graph$, $max\_iter$, $whitelist$,  $blacklist$, $init\_weight$, $deg'$}
 	\State $rank\_score = Dictionary$
-		
+			
 	\For{$domain$ in $blacklist$}
 	\State $rank\_score[domain] = -init\_weight$
 	\EndFor
-		
+			
 	\For{$domain$ in $whitelist$}
 	\State $rank\_score[domain] = init\_weight$
 	\EndFor
-	
+		
 	\While{$max\_iter > 0$}
 	\For{$h_i\in H$}
 	\State $rank\_score(h_i) = \sum_{d_j: (h_i, d_j)\in E} \frac{rank\_score(d_j)}{deg'(d_j)}$
 	\EndFor
-			
+				
 	\For{$d_j\in D$}
 	\State $rank\_score(d_j) = \sum_{h_i: (h_i, d_j)\in E} \frac{rank\_score(h_i)}{deg'(h_i)}$
 	\EndFor
@@ -475,7 +486,7 @@ exploit, который позволяет исполнить произволь
 	\center
 	\includegraphics[width=0.9\linewidth]{fail-graph.png}
 	\caption{Граф неудачных DNS-запросов (синие - хосты, красные - домены)}
-		
+			
 	\label{fig:subim1}
 \end{figure}
 	
@@ -495,11 +506,11 @@ exploit, который позволяет исполнить произволь
 	      	\item Перебор возможных доменных имён C\&C сервера
 	      	\item Другое
 	      \end{enumerate}
-	      	
+	      	      	
 	\item Ребро из одного хоста к одному домену. Соответствует запросу редкого домена.
-	      	
+	      	      	
 	\item Плотный двудольный подграф, соответствует <<сильной>> связи между группами пользователей и группой доменов. Может быть порождён группой клиентов - членов одного и того же ботнета.
-	      	
+	      	      	
 	\item <<Дерево>>, которое представимо в виде объединения компонент, перечисленных выше
 \end{enumerate}
 	
@@ -511,7 +522,7 @@ exploit, который позволяет исполнить произволь
 \begin{algorithmic}
 	\Function{ConstructGraph}{$querylog$, $whitelist$}
 	\State $graph \gets ((\emptyset \times \emptyset$), $\emptyset$)
-	
+		
 	\For{$query$ in $querylog$}
 	\If{$query[rcode] == 0 \vee query[domain] \in whitelist$}
 	\State CONTINUE
@@ -522,7 +533,7 @@ exploit, который позволяет исполнить произволь
 	\State $graph.add\_node(query[client\_ip])$
 	\State $graph.add\_node(query[dname])$
 	\State $graph.add\_edge((query[client\_ip], query[dname]))$
-			
+				
 	\EndFor
 	\State \Return $graph$
 	\EndFunction
@@ -593,7 +604,7 @@ $$\min_{U \ge 0, S \ge 0, V \ge 0}{|| A - USV^T||^2}$$
 	\item [11.] $white\_score$ (по 3 часам) ~\eqref{eq:dr1-white}
 	\item [12.] $union\_score$ (по 3 часам) ~\eqref{eq:dr1-union}
 	\item [12.] $rank\_score$ (по 3 часам) ~\eqref{eq:dr2-rank}
-	      		
+	      	      		
 \end{enumerate}
 \section{Постановка задачи классификации}
 Этот набор признаков будем использовать в дальнейшем. Далее ставится задача
@@ -610,7 +621,7 @@ $$\min_{U \ge 0, S \ge 0, V \ge 0}{|| A - USV^T||^2}$$
 	$ROC\_AUC$                     & Функция площади под ROC-кривой                                                    \\[0.1cm]
 	$CLF$                          & Множество классификаторов                                                        \\[0.1cm]
 	$PARAM$                        & Множество параметров для классификатора                              \\[0.1cm]
-	
+		
 \end{tabular}
 	 
 {\bf
@@ -642,14 +653,14 @@ $ROC\_AUC$ вычисляется как площадь под кривой $ROC
 Перечислим шаги, необходимые для получения итогового классификатора
 \begin{enumerate}
 	\item Весь объем $querylog$ делим на части по 3 часа в каждой, каждая часть будет использоваться как входные данные для итогового алгоритма. Шаги далее будут описаны для работы с одной такой частью.
-	      	
+	      	      	
 	\item Вычисляем признаки 1--9 из~\ref{sec:desc-features}. Для их вычисления не требуется никакой дополнительной информации
-	      	
+	      	      	
 	\item Строим двудольный граф $(H \times D, E)$
-	      	
+	      	      	
 	\item Берем исходные $blacklist$ и $whitelist$, перемешиваем и делаем 4 независимых разбиения на обучающую и тестовую выборки в соотношении 70/30 
 	      (такой подход именуется $KFold CV$)
-	      	
+	      	      	
 	\item Для каждого такого разбиения $(X\_train, y\_train)$, $(X\_test, y\_test)$
 	      \begin{enumerate}
 	      	\item Вычисляем признаки 10--13 (используя для начальной инициализации $(X\_train, y\_train)$
@@ -658,9 +669,9 @@ $ROC\_AUC$ вычисляется как площадь под кривой $ROC
 	      	      	\item Обучанем классификатор $clf_i$ с параметрами $param_i$ на множестве $(X\_train, y\_train)$
 	      	      	\item Вычисляем $ROC\_AUC(X\_test, y\_test)$
 	      	      \end{enumerate}
-	      	      	
+	      	      	      	      	
 	      \end{enumerate}
-	      	
+	      	      	
 	\item Вычисляем
 	      \begin{equation}
 	      	\label{eq:clf-opt}
@@ -688,7 +699,7 @@ $ROC\_AUC$ вычисляется как площадь под кривой $ROC
 	\center
 	\includegraphics[width=1.\linewidth]{dns-comm.png}
 	\caption{Сбор логов с DNS-серверов}
-		
+			
 	\label{fig:collect-log}
 \end{figure}
 
@@ -696,7 +707,7 @@ $ROC\_AUC$ вычисляется как площадь под кривой $ROC
 
 Важно отметить, что в текущей архитектуре DNS сервер состоит из 2 частей: сам DNS сервер (Bind) и прокси, который стоит перед ним и пропускает через себя все запросы пользователей. Это нужно для того, чтобы реализовывать персональную фильтрацию для каждого из пользователей. Для этого в DNS пакет добавляется токен, которому соответствуют конкретные настройки фильтрации. 
 
-Важно, что именно прокси записывает необходимые нам $querylog$ на диск. Эту задачу нельзя переложить на Bind, так как при включении логгирования запросов время его ответа увеличивается нелинейно, в зависимости от количества запросов. Следовательно, при большом количестве запросов, он существенно замедляется, что сказывается на комфорте пользователей, а это неприемлемо.
+Важно, что именно прокси записывает необходимые нам $querylog$ на диск. Эту задачу нельзя переложить на Bind, так как при включении логгирования запросов время его ответа увеличивается нелинейно, в зависимости от количества запросов. Следовательно, при большом количестве запросов, он существенно замедляется, что сказывается на комфорте пользователей, а это неприемлемо. Подтверждение данных слов можно найти в презентации  $\cite{bind}$
 
 Также, прокси записывает дополнительную информацию (например profile\_id пользователя и категории, которые присвоены запрашиваемому домену). Всю эту информацию Bind не может логгировать по техническим причинам.
 
@@ -705,7 +716,7 @@ $ROC\_AUC$ вычисляется как площадь под кривой $ROC
 	\center
 	\includegraphics[width=0.75\linewidth]{clf-schema.png}
 	\caption{Процесс обработки и анализа $querylog$}
-		
+			
 	\label{fig:full-proc}
 \end{figure}
 
@@ -721,24 +732,170 @@ $ROC\_AUC$ вычисляется как площадь под кривой $ROC
 В фиолетовой зоне происходит построение классификатора для поиска вредоносных доменов. Данный процесс подробно расписан в главе ~\ref{chap:union-all}.
 
 В зеленой зоне содержатся результаты работы всех алгоритмов. В одном случае, это вредоносные подграфы, в другом же - доменные имена. В компании SkyDNS эта информация используется для блокировки доменных имен (на этапе разрешения адреса DNS сервером), что позволяет уберечь пользователя от невольного участия в DDoS атаке. Кроме того, данная информация позволяет уведомлять пользователей о вредоносной активности на их ПК. Также, данная информация полезна антивирусным компаниям, так как именно они занимаются обнаружением и уничтожением ботнетов (что есть достаточно трудоемкий процесс).
+\section{Описание скрипта для поиска вредоносных доменных имен}
+Данный скрипт (реализующий подход, описанный в главе ~\ref{chap:union-all}) написан на языке python версии 2.7, реализован в виде консольной утилиты, принимающей на вход параметры, описанные ниже
+\begin{center}
+	\begin{tabular}{|p{3cm}|p{5cm}|p{7cm}|}
+		\hline
+		Ключ    & Параметр           & Описание                                                                           \\ \hline
+		--help      &                            & Показать справку                                                            \\ \hline
+		--files     & [filename [filename ... ]] & Список $querylog$ файлов для обработки                             \\ \hline
+		--blacklist & filename                   & Список заведомо вредоносных доменов                        \\ \hline
+		--whitelist & filename                   & Список заведомо чистых доменов                                  \\ \hline
+		--output    & filename                   & Выходной файл с предсказаниями                                  \\ \hline
+		--n\_folds  & number                     & Количество разбиений выборки при кроссвалидации \\ \hline
+		--n\_iter   & number                     & Количество итераций при просчете рангов доменов  \\ \hline
+		--verbose   &                            & Отладочный вывод                                                            \\ \hline
+	\end{tabular}
+\end{center}
 
-\section{Оценка результатов классификации}
+В среднем, полная обработка 3 часов $querylog$ с помощью этого скрипта занимает 30 минут (варьируется в зависимости от количества запросов к DNS серверам в пределах от 10 до 40 минут). Каждый день, алгоритм находит около 5 тысяч новых вредоносных доменов. Скрипт содержится в Приложении~\ref{appendix:code}.
+
+
+\section{Описание скрипта для поиска вредоносных подграфов}
+Данный скрипт также реализован на языке python в формате IPython Notebook. У данного формата есть ряд преимуществ, например, быстрое изменение исходного кода, работа в браузере и возможность <<пересчета>> отдельных блоков кода. Данный подход достаточно удобен, так как вредоносные подграфы используются для расследования инцидентов, связанных с подозрительной активностью групп пользователей. Так как процесс анализа подграфов, на текущий момент, не является автоматическим и требует человеческого вмешательства, поэтому, подобная реализация является уместной в рамках данной работы.
+
+В качестве входных данных скрипт использует несколько частей $querylog$. В качестве результата его работы, пользователь получает изображения подграфов, с указанием конкретных ip адресов клиентов и доменов.
+
+\chapter{Результаты классификации}
+\section{Примеры работы алгоритмов}
+\begin{center}
+	\begin{tabular}{ | l |}
+		\hline                              
+		Вредоносные домены \\ \hline
+		gelcpzvqfrv.info                    \\ \hline
+		ljxemtwmrmvtleqijtkppzxsdl.info     \\ \hline
+		cokocoko.com                        \\ \hline
+		zttwjnoftkljwchmauhytivozcqsc.com   \\ \hline
+		reumatologiapalermo.it              \\ \hline
+		rwlfjbbqprgtgpfecascxcpblv.org      \\ \hline
+		puauuanghclundcrmo.ug               \\ \hline
+		wadufh.net                          \\ \hline
+		ysoiigwu.com                        \\ \hline
+		fersen.it                           \\ \hline
+		vajjxnx.org                         \\ \hline
+		nvfutv.info                         \\ \hline
+		dpjtdw.net                          \\ \hline
+		kupqmwb.net                         \\ \hline
+		jhypyvaqjtiohfn.com                 \\ \hline
+		jhmstfhi.net                        \\ \hline
+		okchjegutoewbuojl.ir                \\ \hline
+		yqodilbwxeubihahqtjdapm.org         \\ \hline
+		dtbkjassn.org                       \\ \hline
+		mpreaupelxd.ru                      \\ \hline
+		goeccwakye.org                      \\ \hline
+		gijqpaaozui.net                     \\ \hline
+		jhdupfjs.net                        \\ \hline
+		                                    
+	\end{tabular}
+	\begin{tabular}{|l|}
+		\hline                    
+		Чистые домены \\ \hline
+		mlstat.com                \\ \hline 
+		sporterr.com              \\ \hline 
+		garmin.com                \\ \hline 
+		gizmodo.com               \\ \hline 
+		best-torrents.net         \\ \hline 
+		dotcime.com               \\ \hline 
+		btzoo.eu                  \\ \hline 
+		reference.com             \\ \hline 
+		motherlessmedia.com       \\ \hline 
+		amazon.nl                 \\ \hline 
+		6pm.com                   \\ \hline 
+		diapers.com               \\ \hline 
+		camfrog.com               \\ \hline 
+		pofqm.xyz                 \\ \hline 
+		hipersushiads.com         \\ \hline 
+		gmtdmp.com                \\ \hline 
+		porntrex.com              \\ \hline 
+		googledrive.com           \\ \hline 
+		mdotm.com                 \\ \hline 
+		fuckmaturesex.com         \\ \hline 
+		ktcfg.net                 \\ \hline 
+		amazon.com.mx             \\ \hline 
+		telegraph.co.uk           \\ \hline 
+	\end{tabular}
+	    
+\end{center}
+В таблицах представлены некоторые доменные имена, которые классификатор посчитал вредоносными и чистыми.
+Рассмотрим, например, домен cokocoko.com, проверим, что про него знает virustotal.com
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.7]{vt-detect.png}
+	\caption{Отчёт virustotal.com по домену cokocoko.com}
+	\label{fig:vt}
+\end{figure}
+
+Как видно на рисунке~\ref{fig:vt}, этот домен действительно вредоносный. К нему обращалось много модификаций вируса (это видно по SHA256 суммам от исполняемых файлов, которые взаимодействовали с этим доменом).
+
+С помощью домена rwlfjbbqprgtgpfecascxcpblv.org было найдено приложение к отчету ФБР $\cite{fbi}$, связаному с наблюдением за ботнетом Zeus.
+
+\newpage
+Что касается подхода с поиском сообществ, чаще всего встречаются тривиальные подграфы (две вершины и одно ребро), ощутимо реже встречаются более интересные конфигурации.
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.7]{mal-graph.png}
+	\caption{Вредоносный подграф}
+	\label{fig:mal-graph}
+\end{figure}
+
+На рисунке~\ref{fig:mal-graph} изображен один из таких вредоносных подграфов. Красным цветом отмечены вершины, соответствующие доменным именам, синим - хеш от ip адресов юзеров (недопустимо раскрывать реальные адреса пользователей). 
+
+\newpage
+\section{Оценка работы классификатора для доменных имен}
+Так как были использованы техники машинного обучения и построены классификаторы (процесс подробно описан в главе ~\ref{chap:union-all}), стоит обратить внимание на формальные метрики оценки классификаторов, которые говорят о <<качестве>> обученных классификаторов.
+
+Возьмем случайный набор из 10 построенных классификаторов и выпишем значения основных метрик в таблицу
+
+\begin{center}
+	\begin{tabular}{ |l|l|l|l|l|l|l|}
+		\hline
+		TP       & FP     & TN         & FN      & precision & recall & roc-auc \\ \hline
+		874,0000 & 9.5000 & 15702.2500 & 38.5000 & 0.9893    & 0.9578 & 0.9929  \\ \hline
+		798.0000 & 3.7500 & 7040.0000  & 27.7500 & 0.9953    & 0.9664 & 0.9962  \\ \hline
+		849.5000 & 0.7500 & 14750.0000 & 29.5000 & 0.9991    & 0.9664 & 0.9943  \\ \hline
+		887.7500 & 4.5000 & 14272.7500 & 26.2500 & 0.9950    & 0.9713 & 0.9936  \\ \hline
+		861.5000 & 2.7500 & 14080.2500 & 43.7500 & 0.9968    & 0.9517 & 0.9914  \\ \hline
+		847.5000 & 6.7500 & 17723.0000 & 41.2500 & 0.9921    & 0.9536 & 0.9937  \\ \hline
+		544.0000 & 7.7500 & 6964.7500  & 41.5000 & 0.9860    & 0.9291 & 0.9953  \\ \hline
+		949.2500 & 5.7500 & 20565.7500 & 45.5000 & 0.9940    & 0.9543 & 0.9924  \\ \hline
+		797.2500 & 4.0000 & 15613.2500 & 34.5000 & 0.9950    & 0.9585 & 0.9919  \\ \hline
+		968.5000 & 3.5000 & 14656.2500 & 30.7500 & 0.9964    & 0.9692 & 0.9932  \\ \hline
+	\end{tabular}
+\end{center}
+
+Данные метрики подтверждают качество построенных классификаторов и, формально, говорят о пригодности использования данного алгоритма в реальных задачах.
+
+
+
 \begin{thebibliography}{99}
-	
+		
 	\bibitem{communication} Gunter Ollmann, ``Botnet Communication Topologies. Understanding the intricacies of botnet command-and-control'', 2009.
-	
+		
 	\bibitem{groupact} Hyunsang Choi, Hanwoo Lee, Heejo Lee, Hyogon Kim, ``Botnet Detection by Monitoring Group Activities in
 	DNS Traffic''.
-	
+		
 	\bibitem{graphscore} Keisuke Ishibashi, Tsuyoshi Toyono, Makoto Iwamura, ``Botnet Detection Combining DNS and Honeypot Data''.
-	
+		
 	\bibitem{rank} Frank Denis, ``Malware vs Big Data'', pp. 30 -- 31.
 	\bibitem{commstruct} Y. Jin, E. Sharafuddin, and Z. L. Zhang, “Unveiling core network-wide communication patterns through application traffic activity graph decomposition,” in Proceedings of the eleventh international joint conference on Measurement and modeling of computer systems. ACM, 2009, pp. 49 -- 60.
 	\bibitem{dnsrfc}  P. Mockapetris, ``DOMAIN NAMES - IMPLEMENTATION AND SPECIFICATION, RFC1035''.
 	\bibitem{nmtf} C. Ding, T. Li, W. Peng, H. Park, ``Orthogonal nonnegative matrix t-factorizations for clustering'', in Proceedings of the 12th ACM SIGKDD
 	international conference on Knowledge discovery and data mining, ser.
 	KDD ’06. New York, NY, USA: ACM, 2006, pp. 126–135.
+	\bibitem{bind} Jeroen Massar, ``DNSTAP: high speed DNS logging without packet capture'', pp. 29 -- 35
+	\bibitem{fbi} ``Appendix for FBI report about Zeus domains'', pp. 73, \url{https://www.justice.gov/opa/file/798036/download}
 \end{thebibliography}
+
+\begin{appendices}
+	
+	\renewcommand\chaptername{Appendix}
+	
+	\chapter{Программный код скрипта для поиска вредоносных доменов}
+	\label{appendix:code}
+	\lstinputlisting[language=Python, breaklines=true, basicstyle=\scriptsize]{../suspicious-detection.py}
+\end{appendices}
 
 
 \end{document} 
