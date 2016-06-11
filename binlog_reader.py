@@ -1,38 +1,34 @@
-from struct import unpack as u
+from struct import unpack_from as u
 from functools import partial
 
 
 def query_factory(fields):
     query = {
-            "version": partial(lambda packet: u("B", packet[:1])[0]),
-            "rcode_and_flags": partial(lambda packet: u("B", packet[1: 2])[0]),
-            "qtype": partial(lambda packet: u("H", packet[2: 4])[0]),
-            "timestam_usec": partial(lambda packet: u("Q", packet[6: 14])[0]),
-            "reserved2": partial(lambda packet: u("I", packet[14: 18])[0]),
-            "reserved3": partial(lambda packet: u("I", packet[18: 22])[0]),
-            "reserved4": partial(lambda packet: u("I", packet[22: 26])[0]),
-            "client_ip": partial(lambda packet: ".".join(str(x) for x in u("BBBB", packet[26: 30]))),
-            "profile_id": partial(lambda packet: u("I", packet[30: 34])[0]),
-            "latency_usec": partial(lambda packet: u("I", packet[34: 38])[0]),
-            "cats": partial(lambda packet: filter(lambda x: x != 0, u("BBBBBBBB", packet[38: 46]))),
-            "reserved5": partial(lambda packet: u("I", packet[46: 50])[0]),
-            "reserved6": partial(lambda packet: u("I", packet[50: 54])[0]),
-            "dname": partial(lambda packet: "".join(u("c" * len(packet[54:]), packet[54:]))),
+            "rcode": partial(lambda packet, offset, length: u("B", packet, offset + 3)[0]),
+            "qtype": partial(lambda packet, offset, length: u("H", packet, offset + 4)[0]),
+            "timestam_usec": partial(lambda packet, offset, length: u("Q", packet, offset + 8)[0]),
+            "client_ip": partial(
+                lambda packet, offset, length: ".".join(str(x) for x in u("BBBB", packet, offset + 28))),
+            "profile_id": partial(lambda packet, offset, length: u("I", packet, offset + 32)[0]),
+            "latency_usec": partial(lambda packet, offset, length: u("I", packet, offset + 36)[0]),
+            "cats": partial(
+                lambda packet, offset, length: filter(lambda x: x != 0, u("BBBBBBBB", packet, offset + 40))),
+            "reserved5": partial(lambda packet, offset, length: u("I", packet, offset + 48)[0]),
+            "reserved6": partial(lambda packet, offset, length: u("I", packet, offset + 52)[0]),
+            "dname": partial(lambda packet, offset, length: "".join(u("c" * (length - 56), packet, offset + 56)))
     }
+    if fields == ["*"]:
+        fields = query.keys()
     new_query = {key: func for key, func in query.items() if key in fields}
-    return lambda length, packet: {key: func(packet) for key, func in new_query.items()}
+    return lambda offset, packet, length: {key: func(packet, offset, length) for key, func in new_query.iteritems()}
 
-
-def binlog_reader(fd, fields, buffer_size=2**20):
+            
+def binlog_reader(fd, fields):
     get_query = query_factory(fields)
-    buff = fd.read(max(2, buffer_size))
-
-    while buff:
-        length = u("H", buff[: 2])[0]
-        if len(buff) <= length:
-            buff += fd.read(buffer_size - len(buff))
-        packet = buff[2: length]
-        yield get_query(length, packet)
-        buff = buff[length:]
-        if not buff or len(buff) == 1:
-            buff += fd.read(buffer_size - len(buff))
+    buff = fd.read(-1)
+    offset = 0
+    
+    while offset < len(buff):
+        length, = u("H", buff, offset)
+        yield get_query(offset, buff, length)
+        offset += length

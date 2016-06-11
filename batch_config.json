@@ -1,0 +1,6 @@
+{
+  "whitelist": "/home/ivan/DNS_FINAL/WHITELIST.csv",
+  "blacklist": "/home/ivan/DNS_FINAL/BLACKLIST.csv",
+  "n_folds": 4,
+  "n_iter": 20
+}
