@@ -1,10 +1,9 @@
-\documentclass[10pt,pdf,hyperref={unicode}]{beamer}
+\documentclass[12pt,pdf,hyperref={unicode}]{beamer}
 
 % \documentclass[aspectratio=43]{beamer}
 % \documentclass[aspectratio=1610]{beamer}
 % \documentclass[aspectratio=169]{beamer}
 
-\usepackage{lmodern}
 \usepackage[T2A]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{tikz}
@@ -15,16 +14,34 @@
 \usepackage[labelsep=endash]{caption}
 
 
+
+\newcommand\Fontvi{\fontsize{26}{20}\selectfont}
+	
 \graphicspath{{prez/}}
 
+
 % отключить клавиши навигации
-%\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{navigation symbols}{}
+
 
 \usetheme{Copenhagen}
 \usecolortheme{default}
+\setbeamertemplate{frametitle}[default][center]
+\usepackage{lmodern}
+%\setbeamertemplate{footline}{}
+\setbeamertemplate{footline}[text line]{%
+  \parbox{\linewidth}{\vspace*{-20pt}\hfill\insertpagenumber}}
 
 \title{Поиск вредоносной активности в DNS трафике}
- 
+
+\institute[]{
+\tiny Министерство образования и науки Российской Федерации\\ 
+Федеральное государственное автономное образовательное учреждение \\ высшего профессионального образования\\
+<<Уральский федеральный университет имени \\первого Президента России Б. Н. Ельцина>>\\
+\vskip+0.3cm
+\scriptsizeИнститут математики и компьютерных наук\\
+Кафедра вычислительной математики}
+
 \author{
 	Студент: Меньших И.А.
 	\and \\
@@ -33,6 +50,7 @@
 \date{}
 
 \begin{document}
+
 
 % титульный слайд
 \begin{frame}
@@ -54,7 +72,7 @@
 	\item Черный список (SkyDNS)
 \end{enumerate}
 
-Необходимо:
+\textbf{Необходимо:}
 \begin{enumerate}
 	\item Найти вредоносные домены
 	\item Выделить общие паттерны взаимодействия клиентов и вредоносных доменов
@@ -63,31 +81,46 @@
 \end{frame}
 
 \begin{frame}
+
 \frametitle{Обзор подходов} 
+\Fontvi
+
+\begin{center}
+\begin{minipage}{.89\textwidth}
 \begin{enumerate}
 	\item Поэтапная фильтрация
 	\item Анализ pDNS и WHOIS
-	\item Sandbox + Reverse Engineering
-	%\item <<Песочница>> и RE
+	\item Sandbox
 \end{enumerate}
+\end{minipage}
+\end{center}
 \end{frame}
 
 \begin{frame}
+\Fontvi
+
 \frametitle{Методы решения} 
+
+\begin{center}
+\begin{minipage}{.97\textwidth}
 \begin{enumerate}
+
 	\item Групповая активность
 	\item Ранжирование доменов
 	\item Поиск и анализ паттернов взаимодействия
-\end{enumerate}
-\end{frame}
 
+\end{enumerate}
+\end{minipage}
+\end{center}
+\end{frame}
 \begin{frame}
 \frametitle{Групповая активность}
+
 Предположения:
 \begin{enumerate}
 	\item Зараженных хостов в сети фиксированное количество.
-	\item Взаимодействие зараженных хостов и C\&C сервера проявляется периодически.
-	\item  Подозрительно, когда на один и тот же домен в разное время запрашивает узкий круг хостов.
+	\item Взаимодействие зараженных хостов и C\&C сервера происходит периодически.
+	\item  Подозрительно, когда один и тот же домен в разное время запрашивает узкий круг хостов.
 \end{enumerate}
 \end{frame}
 
@@ -104,7 +137,7 @@
 
 \begin{frame}
 \frametitle{Ранжирование доменов}
-Идея - рассмотрим запросы пользователей за некоторый промежуток времени как граф.
+Идея: рассмотрим запросы пользователей за некоторый промежуток времени как граф.
 \newline
 \begin{definition}[Граф запросов]Двудольный неориентированный граф $(H\times D,  E)$, 
 где $H$ - множество хостов, $D$ - множество доменных имён, ($h_i$, $d_j$)$\in$$E$, если пользователь $h_i$ запрашивал домен $d_j$. 
@@ -141,16 +174,20 @@
 
 \begin{frame}
 \frametitle{Ранжирование доменов}
-@@ВОТ ТУТ НУЖЕН ПРИМЕР, АНИМАЦИЯ
+Процесс, который скрывается за формулами 1 -- 4
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.175]{ranking.png}
+\end{figure}
 \end{frame}
 
 \begin{frame}
 \frametitle{Анализ паттернов взаимодействия}
-Идея - рассматривать в графе только ребра, соответствующие неудачным запросам и искать <<плотные>> подграфы
+Идея: будем рассматривать в графе только ребра, соответствующие неудачным запросам и искать <<плотные>> подграфы
 \begin{figure}[H]
 	\centering
-	\includegraphics[scale=0.14]{img/fail-graph.png}
-	\caption{Граф неудачных DNS-запросов (\tikz{\draw[fill=blue] (0,0) circle (0.1cm);} - хосты, \tikz{\draw[fill=red] (0,0) circle (0.1cm);} - домены)}
+	\includegraphics[scale=0.13]{img/fail-graph.png}
+	%\caption{Граф неудачных DNS-запросов (\tikz{\draw[fill=blue] (0,0) circle (0.1cm);} - хосты, \tikz{\draw[fill=red] (0,0) circle (0.1cm);} - домены)}
 \end{figure}
 \end{frame}
 
@@ -162,23 +199,18 @@
 	\item Находим все компоненты связности (BFS)
 	\item Для каждой компоненты связности
 	\begin{enumerate}
-		\item Ищем плотные подграфы (3-NMF)
+		\item Ищем плотные подграфы (3-NMF или иное)
 		\item Вычисляем $$density = \frac{|E|}{|H|*|D|}$$
-		\item Удаляем те подграфы, которые либо маленькие, либо недостаточно <<плотные>>
+		\item Удаляем те подграфы, которые либо маленькие, либо имеют малый $density$
 	\end{enumerate}
 \end{enumerate}
 \end{frame}
 
 \begin{frame}
 \frametitle{Анализ паттернов взаимодействия}
-@@ И тут нужен пример
-\end{frame}
-
-\begin{frame}
-\frametitle{Объединение подходов и автоматизация анализа}
 \begin{figure}[H]
 	\centering
-	\includegraphics[scale=0.4]{schema-head.png}
+	\includegraphics[scale=0.2]{decompose.png}
 \end{figure}
 \end{frame}
 
@@ -186,34 +218,34 @@
 \frametitle{Объединение подходов и автоматизация анализа}
 \begin{figure}[H]
 	\centering
-	\includegraphics[scale=0.4]{schema-tail.png}
+	\includegraphics[scale=0.37]{schema-head.png}
 \end{figure}
 \end{frame}
 
 \begin{frame}
-\frametitle{Итоги}
-Результаты:
+\frametitle{Объединение подходов и автоматизация анализа}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.37]{schema-tail.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Результаты}
 \begin{enumerate}
 	\item Разработан программный продукт, который занимается поиском вредоносных доменов.
-	\item Продукт внедрен в эксплуатацию в компании SkyDNS и показывает хорошие результаты в <<реальных>> условиях.
+	\item Продукт внедрен в эксплуатацию в компании SkyDNS и показывает хорошие результаты в реальных условиях.
 	\item Разработана основная часть системы для ручного анализа вредоносных подграфов.
 \end{enumerate}
+\end{frame}
 
-Что дальше:
+\begin{frame}
+\frametitle{Планы на будущее}
 \begin{enumerate}
 	\item Продолжать работу над анализом <<плотных>> подграфов, автоматизировать этот процесс за счет дополнительной информации о доменах.
 	\item Улучшать текущий анализатор за счет более тонкой настройки на этапе подбора параметров.
 	
 \end{enumerate}
 \end{frame}
-
-\begin{frame}
-\frametitle{Благодарность}
-\Large\centeringСпасибо за внимание!
-\end{frame}
-
-
-
-
 
 \end{document}
