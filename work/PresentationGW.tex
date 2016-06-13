@@ -15,7 +15,7 @@
 
 
 
-\newcommand\Fontvi{\fontsize{26}{20}\selectfont}
+\newcommand\Fontvi{\fontsize{18}{20}\selectfont}
 	
 \graphicspath{{prez/}}
 
@@ -30,11 +30,27 @@
 \usepackage{lmodern}
 %\setbeamertemplate{footline}{}
 \setbeamertemplate{footline}[text line]{%
-  \parbox{\linewidth}{\vspace*{-20pt}\hfill\insertpagenumber}}
+  \parbox{\linewidth}{\vspace*{-20pt}\hfill\insertpagenumber}
+}
+
+\defbeamertemplate*{title page}{customized}[1][]
+{
+  \vskip+0.5cm
+  \centering\usebeamerfont{institute}\insertinstitute\par
+  \vskip+1.2cm
+  \usebeamerfont{title}\inserttitle\par
+  \vskip+0.5cm
+  \small\usebeamerfont{author}\insertauthor\par
+  \vskip+1.2cm
+  \footnotesizeЕкатеринбург\\2016
+  
+  %\usebeamerfont{date}\insertdate\par
+  \usebeamercolor[fg]{titlegraphic}\inserttitlegraphic
+}
 
 \title{Поиск вредоносной активности в DNS трафике}
 
-\institute[]{
+\institute{
 \tiny Министерство образования и науки Российской Федерации\\ 
 Федеральное государственное автономное образовательное учреждение \\ высшего профессионального образования\\
 <<Уральский федеральный университет имени \\первого Президента России Б. Н. Ельцина>>\\
@@ -45,7 +61,7 @@
 \author{
 	Студент: Меньших И.А.
 	\and \\
-	Руководитель: Солодушкин С.И.
+	Руководитель: к.ф.-м.н., доцент Солодушкин С.И.
 }
 \date{}
 
@@ -58,26 +74,25 @@
 \end{frame} 
 
 \begin{frame}
-\frametitle{Постановка задачи} 
-Дано:
+\frametitle{Постановка задачи}
+\begin{block}{Дано}
+
+%Дано:
 \begin{enumerate}
 	\item DNS-логи
-	\begin{enumerate}[-]
-		\item source\_ip
-		\item domain
-		\item rcode
-	
-	\end{enumerate}
+
 	\item Белый список (Alexa, Quancast)
 	\item Черный список (SkyDNS)
 \end{enumerate}
+\end{block}
 
-\textbf{Необходимо:}
+\begin{block}{Необходимо}
 \begin{enumerate}
 	\item Найти вредоносные домены
 	\item Выделить общие паттерны взаимодействия клиентов и вредоносных доменов
 	\item Реализовать полученные подходы в виде программного кода и внедрить результат в производство
 \end{enumerate}
+\end{block}
 \end{frame}
 
 \begin{frame}
@@ -86,7 +101,7 @@
 \Fontvi
 
 \begin{center}
-\begin{minipage}{.89\textwidth}
+\begin{minipage}{.69\textwidth}
 \begin{enumerate}
 	\item Поэтапная фильтрация
 	\item Анализ pDNS и WHOIS
@@ -102,7 +117,7 @@
 \frametitle{Методы решения} 
 
 \begin{center}
-\begin{minipage}{.97\textwidth}
+\begin{minipage}{.72\textwidth}
 \begin{enumerate}
 
 	\item Групповая активность
@@ -126,13 +141,15 @@
 
 \begin{frame}
 \frametitle{Групповая активность}
-Алгоритм поиска групповой активности
+\begin{block}{Алгоритм поиска групповой активности}
+\vskip+0.2cm
 \begin{enumerate}
 	\item Делим логи на <<окна>> фиксированного размера.
 	\item Группируем хосты по домену.
 	\item Фильтруем по черным/белым спискам и количеству уникальных пользователей.
 	\item Сравниваем группы пользователей одного и того же домена в разных <<окнах>>, если группы сильно схожи - домен подозрительный.
 \end{enumerate}
+\end{block}
 \end{frame}
 
 \begin{frame}
@@ -178,6 +195,7 @@
 \begin{figure}[H]
 	\centering
 	\includegraphics[scale=0.175]{ranking.png}
+	\caption{Схематичный пример вычисления ранга}
 \end{figure}
 \end{frame}
 
@@ -186,24 +204,29 @@
 Идея: будем рассматривать в графе только ребра, соответствующие неудачным запросам и искать <<плотные>> подграфы
 \begin{figure}[H]
 	\centering
-	\includegraphics[scale=0.13]{img/fail-graph.png}
-	%\caption{Граф неудачных DNS-запросов (\tikz{\draw[fill=blue] (0,0) circle (0.1cm);} - хосты, \tikz{\draw[fill=red] (0,0) circle (0.1cm);} - домены)}
+	\includegraphics[scale=0.12]{img/fail-graph.png}
+	\hskip+5cm\caption{Граф DNS-запросов (\tikz{\draw[fill=blue] (0,0) circle (0.1cm);} - хосты, \tikz{\draw[fill=red] (0,0) circle (0.1cm);} - домены)}
 \end{figure}
+
 \end{frame}
+
+
 
 \begin{frame}
 \frametitle{Анализ паттернов взаимодействия}
-Алгоритм декомпозиции графа
+\begin{block}{Алгоритм декомпозиции графа}
+\vskip+0.2cm
 \begin{enumerate}
 	\item Удаляем ребра (DNS-Overload, SERVFAIL, etc)
 	\item Находим все компоненты связности (BFS)
-	\item Для каждой компоненты связности
-	\begin{enumerate}
+	\item Для каждой компоненты связности:
+	\begin{enumerate}[a)]
 		\item Ищем плотные подграфы (3-NMF или иное)
 		\item Вычисляем $$density = \frac{|E|}{|H|*|D|}$$
 		\item Удаляем те подграфы, которые либо маленькие, либо имеют малый $density$
 	\end{enumerate}
 \end{enumerate}
+\end{block}
 \end{frame}
 
 \begin{frame}
@@ -231,7 +254,7 @@
 \end{frame}
 
 \begin{frame}
-\frametitle{Результаты}
+\frametitle{Результаты работы}
 \begin{enumerate}
 	\item Разработан программный продукт, который занимается поиском вредоносных доменов.
 	\item Продукт внедрен в эксплуатацию в компании SkyDNS и показывает хорошие результаты в реальных условиях.
@@ -248,4 +271,9 @@
 \end{enumerate}
 \end{frame}
 
+
+\begin{frame}
+\frametitle{-}
+\Large\centeringСпасибо за внимание!
+\end{frame}
 \end{document}
